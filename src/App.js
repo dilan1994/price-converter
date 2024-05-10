@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('EUR');
-  const [convertedAmount, setConvertedAmount] = useState(0);
+  const [currencyRates, setCurrencyRates] = useState({});
+  const [displayAll, setDisplayAll] = useState(false);
+  const [factor, setFactor] = useState(1);
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=483ea77b178444b0878b505205811779`);
+      const data = await response.json();
+      setCurrencyRates(data.rates);
+    };
+
+    fetchRates();
+  }, []);
 
   const handleAmountChange = (event) => {
     setAmount(event.target.value);
   };
 
-  const handleCurrencyChange = (event) => {
-    setCurrency(event.target.value);
+  const toggleDisplayAll = () => {
+    setDisplayAll(!displayAll);
   };
 
-  const convertCurrency = async () => {
-    const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=483ea77b178444b0878b505205811779`);
-    const data = await response.json();
-    const rate = data.rates[currency];
-    setConvertedAmount(amount * rate);
+  const changeAllRates = () => {
+    setFactor(factor === 1 ? 1.1 : 1);  // Toggle factor between 1 and 1.1 (10% increase or normal)
   };
 
   return (
@@ -33,15 +41,18 @@ function App() {
           onChange={handleAmountChange}
           placeholder="Enter amount in USD"
         />
-        <select value={currency} onChange={handleCurrencyChange}>
-          <option value="EUR">Euro</option>
-          <option value="JPY">Japanese Yen</option>
-          <option value="GBP">British Pound</option>
-          <option value="INR">Indian Rupee</option>
-        </select>
-        <button onClick={convertCurrency}>Convert</button>
+        <button onClick={toggleDisplayAll}>
+          {displayAll ? "Show Fewer Currencies" : "Show All Currencies"}
+        </button>
+        <button onClick={changeAllRates}>
+          {factor === 1 ? "Increase All by 10%" : "Reset Rates"}
+        </button>
       </div>
-      <p>Converted Amount: {convertedAmount.toFixed(2)} {currency}</p>
+      <div>
+        {Object.entries(currencyRates).filter(([key, value]) => displayAll || ["EUR", "JPY", "GBP", "INR"].includes(key)).map(([key, value]) => (
+          <p key={key}>{key}: {(value * factor * amount).toFixed(2)}</p>
+        ))}
+      </div>
     </div>
   );
 }
